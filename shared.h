@@ -7,6 +7,9 @@
 #include <sys/shm.h>	// Shmget
 #include <unistd.h>	// Windows stuff
 #include <sys/wait.h>	// waitpid
+#include <stdbool.h>	// Bool
+#include <sys/msg.h>	// Shared Messaging
+#include <sys/sem.h>	// Semaphores
 
 #define MAX_PROCESS 18
 
@@ -22,6 +25,11 @@ struct ProcBlock{
 	pid_t pid;
 	int startTimeSec;
 	int startTimeNSec;
+	bool inProg;
+};
+
+struct Msg{
+	bool flag;	
 };
 
 #endif

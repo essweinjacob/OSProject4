@@ -5,6 +5,8 @@ void getMsgQue();
 void getClock();
 void getSema();
 void getPCB();
+void semLock();
+void semRelease();
 
 // Global varaiables
 // Message queue variables
@@ -91,4 +93,18 @@ void getPCB(){
 		perror("ERROR IN child.c: FAILED TO ATTACH MEMEORY FOR PCB");
 		exit(EXIT_FAILURE);
 	}
+}
+
+void semLock(){
+	semOp.sem_num = 0;
+	semOp.sem_op = -1;
+	semOp.sem_flg = 0;
+	semop(semaID, &semOp, 1);
+}
+
+void semRelease(){
+	semOp.sem_num = 0;
+	semOp.sem_op = 1;
+	semOp.sem_flg = 0;
+	semop(semaID, &semOp, 1);
 }

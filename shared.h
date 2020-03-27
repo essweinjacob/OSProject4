@@ -26,10 +26,22 @@ struct ProcBlock{
 	int startTimeSec;
 	int startTimeNSec;
 	bool inProg;
+	int prio;
 };
 
 struct Msg{
-	bool flag;	
+	long mtype;
+	char msgtxt[200];
+};
+
+struct QNode{
+	int index;
+	struct QNode *next;
+};
+
+struct Queue{
+	struct QNode *front;
+	struct QNode *rear;
 };
 
 #endif

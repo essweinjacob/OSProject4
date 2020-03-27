@@ -13,6 +13,8 @@ void incTimer();
 bool procReady(int index);
 bool makeNewProc(int prevProcSec, int prevProcNSec, int betweenProcSec, int betweenProcNSec);
 void generateProc(int index);
+void semLock();
+void semRelease();
 
 // Global Variables
 // Pid list info
@@ -34,6 +36,10 @@ struct sembuf semOp;
 key_t pcbKey = -1;
 int pcbID = -1;
 struct ProcBlock *pcb;
+// Queues
+struct Queue *highPrio;
+struct Queue *midPrio;
+struct Queue *lowPrio;
 
 int main(int argc, int argv[]){
 	// Set up all shared memory
@@ -51,11 +57,11 @@ int main(int argc, int argv[]){
 	bool exitStatus = false;
 	pid_t pid;
 	
-	/*
 	// Its forking time
 	while(exitStatus == false){
-		// Generate a new process
 		if(activeChildren <= 18 && procReady(index)){
+			// Generate new process
+			pid = fork();
 			generateProc(childDone);
 			if(pid < 0){
 				perror("ERROR IN oss.c: Failed to fork");
@@ -67,17 +73,16 @@ int main(int argc, int argv[]){
 			}
 			activeChildren++;
 		}
-		while(1){
-			if((pid = waitpid((pid_t)-1, &status, WNOHANG)) > 0){
-				if(WIFEXITED(status)){
-					printf("Child has exited\n");
-					childDone++;
-					break;
-				}
+		if((pid = waitpid((pid_t)-1, &status, WNOHANG)) > 0){
+			if(WIFEXITED(status)){
+				childDone++;
+				break;
 			}
 		}
+		if(activeChildren >= 20){
+			god(1);
+		}
 	}
-	*/
 	
 	freeMem();
 
@@ -104,7 +109,7 @@ void god(int signal){
 
 void getMsgQue(){
 	msgQueKey = ftok("./oss.c", 0);
-	msgQueID = msgget(msgQueKey, 0600);
+	msgQueID = msgget(msgQueKey, IPC_CREAT | 0600);
 	if(msgQueID < 0){
 		perror("ERROR IN oss.c: FAILED TO GET MSG QUEUE FROM SHARED MEM");
 		exit(EXIT_FAILURE);
@@ -192,6 +197,9 @@ void generateProc(int index){
 	pcb[index].startTimeSec = timer->sec;
 	pcb[index].startTimeNSec = timer->nsec;
 	pcb[index].inProg = true;
+	srand(index);
+	pcb[index].prio = (rand() % (2 - 0 + 1));
+	
 	printf("Generating Process with PID %d and putting it in queue %d at time %d:%d\n", pcb[index].simPID, 0, pcb[index].startTimeSec, pcb[index].startTimeNSec);
 }
 
@@ -209,4 +217,18 @@ void recevingProc(int index){
 	int receiveTimeSec;
 	int receiveTimeNSec;
 	printf("Receving that process with PID %d ran for %d seconds and %d nanoseconds\n", pcb[index].simPID, timer->sec, timer->nsec);
+}
+
+void semLock(){
+	semOp.sem_num = 0;
+	semOp.sem_op = -1;
+	semOp.sem_flg = 0;
+	semop(semaID, &semOp, 1);
+}
+
+void semRelease(){
+	semOp.sem_num = 0;
+	semOp.sem_op = 1;
+	semOp.sem_flg = 0;
+	semop(semaID, &semOp, 1);
 }

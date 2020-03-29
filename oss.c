@@ -72,7 +72,14 @@ int main(int argc, int argv[]){
 	getSema();
 	getPCB();
 
-	freeMem();
+	// Setup bitmap
+
+	// Free up shar with null values
+	memset(bitmap, '\0', sizeof(bitmap));
+
+	// Initial share memory clock/timer values
+	timer->sec = 0;
+	timer->nsec = 0;
 
 	printf("Program finished?\n");
 }

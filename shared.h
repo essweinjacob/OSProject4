@@ -34,6 +34,14 @@ struct ProcBlock{
 	int prio;
 };
 
+// Process
+struct Process{
+	int index;
+	pid_t pid;
+	int prio;
+};
+
+// Shared memory message
 struct Msg{
 	long type;
 	int flag;
@@ -51,16 +59,19 @@ struct Msg{
 	char message[1024];
 };
 
+// Node in queue
 struct QNode{
 	int index;
 	struct QNode *next;
 };
 
+// Queue
 struct Queue{
 	struct QNode *front;
 	struct QNode *rear;
 };
 
+// Function to create a queue
 struct Queue *createQueue(){
 	struct Queue *q = (struct Queue *)malloc(sizeof(struct Queue));
 	q->front = NULL;

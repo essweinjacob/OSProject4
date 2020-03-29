@@ -72,109 +72,6 @@ int main(int argc, int argv[]){
 	getSema();
 	getPCB();
 
-	// Generate Bitmap and initialize all values to NULL
-	memset(bitmap, '\0', sizeof(bitmap));
-
-	// Variables for Forking
-	int index = -1;
-	int childDone = 0;
-	int status = 0;
-	int activeChildren = 0;
-	bool exitStatus = false;
-	int childLaunched = 0;
-	pid_t pid;
-
-	// Initial timer values
-	timer->sec = 0;
-	timer->nsec = 0;
-
-	// Set up queues
-	highPrio = createQueue();
-	midPrio = createQueue();
-	lowPrio = createQueue();
-
-	// Multi Process Handeling
-	bool isOpen = false;		// Checking if place in bit map is open
-	int curQue = 0;
-	
-	// Its forking time
-	while(exitStatus == false){
-		// Check if place in bit map is open
-		isOpen = false;
-		int procCount = 0;
-		while(1){
-			index = (index + 1) % MAX_PROC;
-			// Bitmap operations
-			uint32_t bit = bitmap[index / 8] & (1 << (index % 8));
-			if(bit == 0){
-				isOpen = true;
-				break;
-			}else{
-				isOpen = false;
-			}
-
-			if(procCount >= MAX_PROC - 1){
-				printf("BIT MAP IS FULL\n");
-				break;
-			}
-			procCount++;
-		}
-
-		// If bit map is open
-		if(isOpen == true){
-			// Generate new process
-			pid = fork();
-			// Forking error
-			if(pid < 0){
-				perror("ERROR IN oss.c: Failed to fork");
-				freeMem();
-				return EXIT_FAILURE;
-			}
-			// Launch child
-			else if(pid == 0){
-				char * args[] = {"./child", NULL};
-				execvp(args[0], args);
-			}else{
-				// Increment amount of children launched
-				childLaunched++;
-
-				// Set index in bitmap to taken
-				bitmap[index / 8] |= (1 << (index % 8));
-
-				// Intialize proccess
-
-				// Put process in queue
-				enQueue(highPrio, index);
-
-				// Generate Process
-				generateProc(index);
-			}
-		}
-		// Scheduleing
-		struct QNode next;
-		if(curQue == 0){
-			next.next = highPrio->front;
-		}else if(curQue == 1){
-			next.next = midPrio->front;
-		}else if(curQue == 2){
-			next.next = lowPrio->front;
-		}
-		// Dispatching
-		if((pid = waitpid((pid_t)-1, &status, WNOHANG)) > 0){
-			if(WIFEXITED(status)){
-				childDone++;
-				activeChildren--;
-			}
-		}
-		// Fail safe for fork bombing
-		if(activeChildren >= 20){
-			god(1);
-		}
-		if(childDone >= 100){
-			exitStatus = true;
-		}
-	}
-	
 	freeMem();
 
 	printf("Program finished?\n");
@@ -268,15 +165,6 @@ void getPCB(){
 	}
 }
 
-void incTimer(){
-	srand(time(NULL));
-	timer->nsec += (rand() % (10000 - 100 + 1)) + 100;
-	while(timer->nsec >= 1000000000){
-		timer->sec++;
-		timer->nsec -= 1000000000;
-	}
-}
-
 struct QNode *newNode(int index){
 	struct QNode *temp = (struct QNode*)malloc(sizeof(struct QNode));
 	temp->index = index;
@@ -297,37 +185,6 @@ void enQueue(struct Queue* q, int index){
 		q->rear->next = temp;
 		q->rear = temp;
 	}
-}
-
-
-
-bool makeNewProc(int prevProcSec, int prevProcNSec, int betweenProcSec, int betweenProcNSec){
-	if((((timer->sec * 1000000000) + timer->nsec) - ((prevProcSec * 1000000000) + prevProcNSec)) >= ((betweenProcSec * 1000000000) + betweenProcNSec)){
-		return true;
-	}else{
-		return false;
-	}
-}
-
-bool procReady(int index){
-	if(pcb[index].inProg == true){
-		return false;
-	}else{
-		return true;
-	}
-}
-
-void generateProc(int index){
-	pcb[index].simPID = index;
-	pcb[index].pid = getpid();
-	prevProcSec = timer->sec;
-	prevProcNSec = timer->nsec;
-	pcb[index].startTimeSec = prevProcSec;
-	pcb[index].startTimeNSec = prevProcNSec;
-	pcb[index].inProg = true;
-	srand(index);
-	
-	printf("Generating Process with PID %d and putting it in queue %d at time %d:%d\n", pcb[index].simPID, 0, pcb[index].startTimeSec, pcb[index].startTimeNSec);
 }
 
 void semLock(){

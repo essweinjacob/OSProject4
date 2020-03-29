@@ -35,8 +35,20 @@ struct ProcBlock{
 };
 
 struct Msg{
-	long mtype;
-	char msgtxt[200];
+	long type;
+	int flag;
+	int index;
+	pid_t childPID;
+	int prio;
+	unsigned int burstTime;
+	unsigned int spawnSec;
+	unsigned int spawnNSec;
+	unsigned int waitSec;
+	unsigned int waitNSec;
+	double waitTime;
+	unsigned int sec;
+	unsigned int nsec;
+	char message[1024];
 };
 
 struct QNode{

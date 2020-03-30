@@ -10,9 +10,7 @@ void getPCB();
 void incTimer();
 struct QNode *newNode(int index);
 void enQueue(struct Queue* q, int index);
-bool procReady(int index);
-bool makeNewProc(int prevProcSec, int prevProcNSec, int betweenProcSec, int betweenProcNSec);
-void generateProc(int index);
+void moveData(struct ProcBlock *pcb, struct Process *c);
 void semLock();
 void semRelease();
 
@@ -53,6 +51,9 @@ int prevProcNSec = 0;
 // Bit map
 unsigned char bitmap[MAX_PROC];
 
+// Other
+int forkLaunched = 0;
+
 int main(int argc, int argv[]){
 	// Set up 3 seconds timer
 	struct itimerval time1;
@@ -73,13 +74,84 @@ int main(int argc, int argv[]){
 	getPCB();
 
 	// Setup bitmap
-
-	// Free up shar with null values
 	memset(bitmap, '\0', sizeof(bitmap));
 
-	// Initial share memory clock/timer values
+	// Variables for forking
+	int index = -1;
+	bool isFree = false;
+	int currentQueue = 0;
+	pid_t pid;
+
+	// Initial timer/clock setup
 	timer->sec = 0;
 	timer->nsec = 0;
+	
+	// Forking
+	while(1){
+		// Check if position in bitmap is still open
+		isFree = false;
+		int procCount = 0;
+		while(1){
+			index = (index + 1) % MAX_PROC;
+			// Get place in bit map
+			uint32_t bit = bitmap[index / 8] & (1 << (index % 8));
+			if(bit == 0){
+				isFree = true;
+				break;
+			}else{
+				isFree = false;
+			}
+
+			if(procCount >= MAX_PROC - 1){
+				perror("BIT MAP IS FULL\n");
+				break;
+			}
+			procCount++;
+		}
+
+		// Fork if there is space available in the bitmap(Generation)
+		if(isFree = true){
+			pid = fork();
+			// Forking error
+			if(pid < 0){
+				perror("ERROR IN oss.c: FORKING FAILED");
+				god(1);
+				return EXIT_FAILURE;
+			}
+			// Create Child
+			if(pid == 0){
+				int execStatus = execl("./child","./child", NULL);
+				if(execStatus == -1){
+					perror("ERROR IN oss.c: EXECL FAILED TO EXECUTE\n");
+					god(1);
+					return EXIT_FAILURE;
+					
+				}
+			}
+			// In parent
+			else{
+				// Increment amount of times fork has launched
+				forkLaunched++;
+
+				// Set index to taken in bitmap so its not reused
+				bitmap[index / 8] |= (1 << (index % 8));
+
+				// Create child process and send its formation to the PCB
+				struct Process *child = createChildProc(index, pid);
+				// Send to PCB
+				moveData(&pcb[index], child);
+				// Put process in queue
+				enQueue(highPrio, index);
+
+				// Display generation information
+				printf("Generating process with PID %d and putting it in queue %d at time %d:%d\n", pcb[index].simPID, pcb[index].prio, timer->sec, timer->nsec);
+
+			}
+		}
+	}
+
+	// Free up shared memeory and list of PIDs
+	freeMem();
 
 	printf("Program finished?\n");
 }
@@ -97,7 +169,7 @@ void god(int signal){
 	for(i = 0; i < numOfPIDS; i++){
 		kill(listOfPIDS[i], SIGTERM);
 
-}
+	}
 	printf("GOD HAS BEEN CALLED AND THE RAPTURE HAS BEGUN. SOON THERE WILL BE NOTHING\n");
 	freeMem();
 	kill(getpid(), SIGTERM);
@@ -152,6 +224,7 @@ void getSema(){
 
 void getPCB(){
 	pcbKey = ftok("./oss.c", 3);
+
 	if(pcbKey == -1){
 		perror("ERROR IN child.c: FAILED TO GENERATE KEY FROM SHARED MEM FOR PCB");
 		freeMem();
@@ -164,7 +237,7 @@ void getPCB(){
 		freeMem();
 		exit(EXIT_FAILURE);
 	}
-	pcb = (struct ProcBlock*)shmat(pcbID, (void*) 0, 0);
+	pcb = shmat(pcbID, (void*) 0, 0);
 	if(pcb == (void*)-1){
 		perror("ERROR IN child.c: FAILED TO ATTACH MEMEORY FOR PCB");
 		freeMem();
@@ -192,6 +265,18 @@ void enQueue(struct Queue* q, int index){
 		q->rear->next = temp;
 		q->rear = temp;
 	}
+}
+
+void moveData(struct ProcBlock *pcb, struct Process *c){
+	pcb->simPID = c->index;
+	pcb->pid = c->pid;
+	pcb->prio = c->prio;
+	pcb->lastBurst = 0;
+	pcb->totalBurst = 0;
+	pcb->totSysSec = 0;
+	pcb->totSysNSec = 0;
+	pcb->totWaitSec = 0;
+	pcb->totWaitNSec = 0;
 }
 
 void semLock(){

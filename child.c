@@ -82,7 +82,7 @@ void getPCB(){
 		perror("ERROR IN child.c: FAILED TO GENERATE KEY FROM SHARED MEM FOR PCB");
 		exit(EXIT_FAILURE);
 	}
-	size_t procTableSize = sizeof(struct ProcBlock) * MAX_PROCESS;
+	size_t procTableSize = sizeof(struct ProcBlock) * MAX_PROC;
 	pcbID = shmget(pcbKey, procTableSize, 0666 | IPC_CREAT);
 	if(pcbID == -1){
 		perror("ERROR IN child.c: FAILED TO GET KEY FOR PCB");

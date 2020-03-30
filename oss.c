@@ -148,6 +148,68 @@ int main(int argc, int argv[]){
 
 			}
 		}
+
+		// Schedule Processes
+		struct QNode nextNode;
+		// Determine which queue/prio the process gets
+		if(currentQueue == 0){
+			nextNode.next = highPrio->front;
+		}else if(currentQueue == 1){
+			nextNode.next = midPrio->front;
+		}else if(currentQueue == 2){
+			nextNode.next = lowPrio->front;
+		}
+
+		int totProcs = 0;
+		float totWaitTime = 0.0;
+		struct Queue *tempoQueue = createQueue();
+		// Where there are still more nodes
+		while(nextNode.next != NULL){
+			totProcs++;
+			// Increment the timer
+			incTimer();
+
+			// Send Msg to child to signify it is their turn
+			int childIndex = nextNode.index;
+			msgInfo.type = pcb[childIndex].pid;
+			msgInfo.index = childIndex;
+			msgInfo.childPID = pcb[childIndex].pid;
+			msgInfo.prio = pcb[childIndex].prio = currentQueue;
+			// Send the message to child
+			msgsnd(msgQueID, &msgInfo, (sizeof(struct Msg) - sizeof(long)), 0);
+
+			// Increment timer because we did something
+			incTimer();
+
+			// Receive information from child process
+			msgrcv(msgQueID, &msgInfo, (sizeof(struct Msg) - sizeof(long)), 1, 0);
+
+			// Print dispatching info
+			printf("Dispatching process with PID %d from queue %d at time %d:%d\n", msgInfo.index, msgInfo.childPID, currentQueue, msgInfo.sec, msgInfo.nsec);
+			
+			incTimer();
+
+			// Second part of dispatch message
+			int diffNSec = timer->nsec - msgInfo.nsec;
+			printf("total time this dispatch was %d nanoseconds\n", diffNSec);
+
+			// Find out how long the process is being run for
+			while(1){
+				incTimer();
+
+				// Receuve time from child message by seeing if child has sent message back, will be not -1
+				int checkIfDone = msgrcv(msgQueID, &msgInfo, (sizeof(struct Msg) - sizeof(long)), 1, IPC_NOWAIT);
+				if(checkIfDone != -1){
+					printf("Receving that process with PID %d ran for %d nanoseconds\n", msgInfo.index, msgInfo.burstTime);
+					break;
+				}
+			}
+
+			incTimer();
+
+			// See if child is finished
+			
+		}
 	}
 
 	// Free up shared memeory and list of PIDs
@@ -242,6 +304,16 @@ void getPCB(){
 		perror("ERROR IN child.c: FAILED TO ATTACH MEMEORY FOR PCB");
 		freeMem();
 		exit(EXIT_FAILURE);
+	}
+}
+
+void incTimer(){
+	srand(time(NULL));
+	int randNum = (rand() % (1000 + 1));
+	timer->nsec += randNum;
+	while(timer->nsec >= 1000000000){
+		timer->sec++;
+		timer->nsec -= 1000000000;
 	}
 }
 

@@ -1,1 +1,16 @@
-stuff
+HOW TO RUN
+	1. Type "make" to compile code
+	2. Type "./oss" to run code
+	3. Check process_log for results
+
+OUTSTANDING PROBLEMS
+	Can't get process to be rescheduled
+	Can't get round robin queue/multi feedback queues to work
+	Statistics aren't working
+	No realtime class
+	No Aging prevention
+	No Chande for users processes to be blocked
+
+PROBLEMS OVERCOME
+How to use message queues correctly
+

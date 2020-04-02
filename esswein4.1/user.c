@@ -41,16 +41,51 @@ int main(int argc, char *argv[]){
 	getPCB();
 	
 	pid_t pid = getpid();
+	int burstTime;
+
+
+	while(1){
+		int result = msgrcv(msgQueueID, &msgInfo, (sizeof(struct Msg) - sizeof(long)), 0, 0);
+		//printf("USER PROCESS ERROR ON msgrcv: %s\n", strerror(errno));
+		if(result != -1){
+			if(pid == msgInfo.pid){
+				break;
+			}
+		}
+	}
 	
-	msgrcv(msgQueueID, &msgInfo, (sizeof(struct Msg) - sizeof(long)), 0, 0);
-	printf("USER RCV RESPONE: %s\n", strerror(errno));
+	srand(pid);
+	int quantBinary = rand() % 2;
+	if(quantBinary == 0){
+		burstTime = QUANTUM;
+	}else{
+		burstTime = rand() % QUANTUM;
+	}
 	cMsgInfo.index = msgInfo.index;
 	cMsgInfo.pid = msgInfo.pid;
 	cMsgInfo.prio = msgInfo.prio;
+	cMsgInfo.burstTime = burstTime;
+	
+	int duration = burstTime;
+	// Sent information to oss about dispatch
 	msgsnd(cMsgQueueID, &cMsgInfo, (sizeof(struct Msg) - sizeof(long)), 1);
-	//printf("USER SND RESPONCE: %s\n", strerror(errno));
-	cMsgInfo.burstTime = 100;
+	//printf("USER PROCESS ERROR ON msgrcv: %s\n", strerror(errno));
+
+	int startNSec = timer->nsec;
+
+	
+	while(1){
+		duration -= timer->nsec - startNSec;
+		//printf("Time remaining: %d\n", duration);
+		if(duration <= 0){
+			break;
+		}
+	}
+	
+
 	msgsnd(cMsgQueueID, &cMsgInfo, (sizeof(struct Msg) - sizeof(long)), 1);
+	//printf("USER PROCESS ERROR ON msgsnd: %s\n", strerror(errno));
+
 	//printf("USER SND RESPONCE: %s\n", strerror(errno));
 	
 	return cMsgInfo.index;

@@ -113,8 +113,8 @@ int main(int argc, int argv[]){
 		addTime();
 		// Send message
 		msgsnd(msgQueueID, &msgInfo, (sizeof(struct Msg) - sizeof(long)), 1);
-		printf("OSS: Signaling process with PID %d [%d] from queue %d to dispatch at %d:%d\n", msgInfo.index, msgInfo.pid, cMsgInfo.prio, timer->sec, timer->nsec);
-		printf("OSS SND ERROR: %s\n", strerror(errno));
+		printf("OSS: Signaling process with PID %d [%d] from queue %d to dispatch at %d:%d\n", msgInfo.index, msgInfo.pid, msgInfo.prio, timer->sec, timer->nsec);
+		//printf("OSS SND ERROR: %s\n", strerror(errno));
 
 		addTime();
 
@@ -133,7 +133,9 @@ int main(int argc, int argv[]){
 		addTime();
 		
 		msgrcv(cMsgQueueID, &cMsgInfo, (sizeof(struct Msg) - sizeof(long)), 0, 0);
+		//printf("OSS: MSG RCV RESPONCE: %s\n", strerror(errno));
 		printf("OSS: receving that process with PID %d [%d] ran for %d nanoseconds\n", cMsgInfo.index, cMsgInfo.pid, cMsgInfo.burstTime);
+		break;
 			
 		if(childActive >= 20){
 			god(1);
